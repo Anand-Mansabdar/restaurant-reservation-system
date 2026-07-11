@@ -6,6 +6,8 @@ const cookieParser = require("cookie-parser");
 
 const authRoutes = require("./src/routes/auth.routes");
 const reservationRoutes = require("./src/routes/reservation.routes");
+const adminRoutes = require("./src/routes/admin.routes");
+const tableRoutes = require("./src/routes/table.routes");
 const errorHandler = require("./src/middlewares/error.middleware");
 const AppError = require("./src/utils/appError");
 
@@ -34,9 +36,8 @@ app.get("/api/health", (req, res) => {
 // --- Routes ---
 app.use("/api/auth", authRoutes);
 app.use("/api/reservations", reservationRoutes);
-// Phase 5+ will add:
-// app.use('/api/admin', adminRoutes);
-// app.use('/api/tables', tableRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/tables", tableRoutes);
 
 // --- 404 handler for unmatched routes ---
 app.use((req, res, next) => {

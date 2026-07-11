@@ -151,10 +151,131 @@ const cancelCustomerReservation = async (reservationId, customerId) => {
   return reservation;
 };
 
+/**
+ * Returns all reservations, optionally filtered by a specific date.
+ * Used by the admin "view all reservations" / "view by date" screens.
+ */
+const getAllReservations = async (dateFilter) => {
+  const query = {};
+
+  if (dateFilter) {
+    const normalized = normalizeDate(dateFilter);
+    if (!normalized) {
+      throw new AppError("Invalid date filter provided.", 400);
+    }
+    query.date = normalized;
+  }
+
+  return Reservation.find(query)
+    .populate("table", "tableNumber capacity")
+    .populate("customer", "name email")
+    .sort({ date: -1, createdAt: -1 });
+};
+
+/**
+ * Admin update of any reservation (date, timeSlot, guests, table, status).
+ * Unlike the customer flow, the admin can directly reassign a specific table
+ * rather than relying on auto-assignment — but we still enforce the same
+ * conflict rules (no double-booking) and capacity rules (table must fit guests).
+ */
+const adminUpdateReservation = async (reservationId, updates) => {
+  const reservation = await Reservation.findById(reservationId);
+  if (!reservation) {
+    throw new AppError("Reservation not found.", 404);
+  }
+
+  const nextDate = updates.date
+    ? normalizeDate(updates.date)
+    : reservation.date;
+  if (updates.date && !nextDate) {
+    throw new AppError("Invalid date provided.", 400);
+  }
+  const nextTimeSlot = updates.timeSlot || reservation.timeSlot;
+  const nextGuests =
+    updates.guests !== undefined ? updates.guests : reservation.guests;
+  const nextTableId = updates.table || reservation.table.toString();
+  const nextStatus = updates.status || reservation.status;
+
+  // If the table changed (or guests changed), verify it can actually seat the party
+  if (updates.table || updates.guests !== undefined) {
+    const table = await Table.findById(nextTableId);
+    if (!table || !table.isActive) {
+      throw new AppError("Selected table does not exist or is inactive.", 404);
+    }
+    if (table.capacity < nextGuests) {
+      throw new AppError(
+        `Table ${table.tableNumber} (capacity ${table.capacity}) cannot seat ${nextGuests} guests.`,
+        400,
+      );
+    }
+  }
+
+  // If date/timeSlot/table changed and the reservation remains 'Booked',
+  // re-check for conflicts against every OTHER booked reservation.
+  const relevantFieldsChanged =
+    updates.date || updates.timeSlot || updates.table;
+  if (relevantFieldsChanged && nextStatus === RESERVATION_STATUS.BOOKED) {
+    const conflict = await Reservation.findOne({
+      _id: { $ne: reservation._id },
+      table: nextTableId,
+      date: nextDate,
+      timeSlot: nextTimeSlot,
+      status: RESERVATION_STATUS.BOOKED,
+    });
+
+    if (conflict) {
+      throw new AppError(
+        "This table is already booked for the selected date and time slot.",
+        409,
+      );
+    }
+  }
+
+  reservation.date = nextDate;
+  reservation.timeSlot = nextTimeSlot;
+  reservation.guests = nextGuests;
+  reservation.table = nextTableId;
+  reservation.status = nextStatus;
+
+  await reservation.save();
+
+  return reservation.populate([
+    { path: "table", select: "tableNumber capacity" },
+    { path: "customer", select: "name email" },
+  ]);
+};
+
+/**
+ * Admin cancellation of any reservation — no ownership check, unlike the
+ * customer-facing cancelCustomerReservation.
+ */
+const adminCancelReservation = async (reservationId) => {
+  const reservation = await Reservation.findById(reservationId);
+
+  if (!reservation) {
+    throw new AppError("Reservation not found.", 404);
+  }
+
+  if (reservation.status !== RESERVATION_STATUS.BOOKED) {
+    throw new AppError(
+      `Cannot cancel a reservation that is already ${reservation.status.toLowerCase()}.`,
+      400,
+    );
+  }
+
+  reservation.status = RESERVATION_STATUS.CANCELLED;
+  await reservation.save();
+
+  return reservation;
+};
+
 module.exports = {
   findCandidateTables,
   getBookedTableIds,
   createReservation,
   getCustomerReservations,
   cancelCustomerReservation,
+  getAllReservations,
+  adminUpdateReservation,
+  adminCancelReservation,
 };

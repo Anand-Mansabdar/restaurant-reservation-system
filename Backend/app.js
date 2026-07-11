@@ -19,8 +19,8 @@ app.use(helmet());
 const corsOptions =
   process.env.NODE_ENV === "production"
     ? {
-        origin: "*", // Allow all origins in production for direct browser access
-        credentials: false, // credentials must be false when origin is "*"
+        origin: "https://restaurant-reservation-system-gilt.vercel.app",
+        credentials: true, // required so the browser sends/receives the httpOnly cookie
       }
     : {
         origin: process.env.CLIENT_URL || "http://localhost:5173",

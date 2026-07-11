@@ -15,12 +15,19 @@ const app = express();
 
 // --- Core middleware ---
 app.use(helmet());
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    credentials: true, // required so the browser sends/receives the httpOnly cookie
-  }),
-);
+// CORS configuration - allow specific origin for credentials or all origins for direct browser access
+const corsOptions =
+  process.env.NODE_ENV === "production"
+    ? {
+        origin: "*", // Allow all origins in production for direct browser access
+        credentials: false, // credentials must be false when origin is "*"
+      }
+    : {
+        origin: process.env.CLIENT_URL || "http://localhost:5173",
+        credentials: true, // required so the browser sends/receives the httpOnly cookie
+      };
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 

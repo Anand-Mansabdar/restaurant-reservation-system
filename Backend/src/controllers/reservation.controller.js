@@ -38,8 +38,10 @@ const getMyReservations = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route   PATCH /api/reservations/:id/cancel
+ * @route   DELETE /api/reservations/:id
  * @access  Private (Customer — own reservations only)
+ * Soft-deletes the reservation by setting its status to 'Cancelled' —
+ * see ReservationService.cancelCustomerReservation for details.
  */
 const cancelMyReservation = asyncHandler(async (req, res) => {
   const reservation = await ReservationService.cancelCustomerReservation(

@@ -41,10 +41,10 @@ app.get("/api/health", (req, res) => {
 });
 
 // --- Routes ---
-app.use("/api/auth", authRoutes);
-app.use("/api/reservations", reservationRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/tables", tableRoutes);
+app.use("/auth", authRoutes);
+app.use("/reservations", reservationRoutes);
+app.use("/admin", adminRoutes);
+app.use("/tables", tableRoutes);
 
 // --- 404 handler for unmatched routes ---
 app.use((req, res, next) => {

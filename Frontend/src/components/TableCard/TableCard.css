@@ -1,0 +1,22 @@
+.table-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.table-card-info p {
+  font-size: 0.875rem;
+  color: var(--color-text-light);
+  margin-bottom: 0.125rem;
+}
+
+.table-card-info p strong {
+  color: var(--color-text);
+}
+
+.table-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
